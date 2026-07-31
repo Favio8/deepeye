@@ -77,7 +77,7 @@ graph LR
     A -->|model decides to call tool| B[DeepEye MCP Server]
     B -->|parse image source| C[Local / URL / Base64]
     B -->|assemble prompt + image| D[Vision Backend Adapter]
-    D --> E1[GPT-4o]
+    D --> E1[GPT-5.6 Luna]
     D --> E2[Gemini]
     D --> E3[Any OpenAI-compatible service]
     E1 -->|text description| B
@@ -96,7 +96,7 @@ Core flow: **receive image → call vision model → return text description**. 
 ### Prerequisites
 
 - **Python 3.11+**
-- A vision model API key (recommend [OpenAI GPT-4o](https://platform.openai.com/); or any OpenAI-compatible service such as [Alibaba Qwen-VL](https://dashscope.aliyun.com/), [Zhipu GLM-4V](https://open.bigmodel.cn/), etc.)
+- A vision model API key (recommend [OpenAI GPT-5.6 Luna](https://platform.openai.com/) — prices dropped 80% on 2026-07-31, now $0.2 / 1M input tokens and $1.2 / 1M output tokens; positioned as a "fast, affordable model for everyday work", ideal for high-volume calls and agent workflows; or any OpenAI-compatible service such as [Alibaba Qwen-VL](https://dashscope.aliyun.com/), [Zhipu GLM-4V](https://open.bigmodel.cn/), etc.)
 
 ### 1. Clone and install
 
@@ -127,7 +127,7 @@ Edit `.env` and fill in your vision model API key:
 ```dotenv
 VISION_PROVIDER=openai
 OPENAI_API_KEY=sk-your-real-key-here
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=gpt-5.6-luna
 # For a compatible service, set OPENAI_BASE_URL instead
 # OPENAI_BASE_URL=https://your-compatible-service/v1
 ```
@@ -256,7 +256,7 @@ All configuration is loaded from environment variables or a `.env` file (see `.e
 |----------|---------|-------------|
 | `VISION_PROVIDER` | `openai` | Vision backend provider: `openai` / `gemini` / `custom` (only `openai` fully implemented so far) |
 | `OPENAI_API_KEY` | — | API key for OpenAI or a compatible service |
-| `OPENAI_MODEL` | `gpt-4o` | Vision model name |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | Vision model name |
 | `OPENAI_BASE_URL` | — | API endpoint; leave empty for the official `https://api.openai.com/v1`; can point to Azure / a proxy / a compatible service |
 | `GEMINI_API_KEY` | — | Gemini backend (reserved) |
 | `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini model name (reserved) |
@@ -293,7 +293,7 @@ Edit `claude_desktop_config.json`:
       "env": {
         "VISION_PROVIDER": "openai",
         "OPENAI_API_KEY": "sk-your-key",
-        "OPENAI_MODEL": "gpt-4o"
+        "OPENAI_MODEL": "gpt-5.6-luna"
       }
     }
   }
@@ -430,7 +430,7 @@ deepeye/
 - [ ] Image preprocessing (smart compression, auto-downscaling oversized images)
 - [ ] Result caching (same image + prompt hits cache)
 - [ ] Video keyframe analysis tool
-- [ ] Multi-model pipeline (e.g., GPT-4o classifies first, then routes to a specialized model)
+- [ ] Multi-model pipeline (e.g., GPT-5.6 Luna classifies first, then routes to a specialized model)
 - [ ] Publish to PyPI
 
 ---

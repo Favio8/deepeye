@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # ---------- OpenAI 兼容后端 ----------
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5.6-luna"
     openai_base_url: str = ""
 
     # ---------- Gemini 后端（预留） ----------

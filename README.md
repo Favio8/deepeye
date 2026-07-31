@@ -77,7 +77,7 @@ graph LR
     A -->|模型决定调用工具| B[DeepEye MCP Server]
     B -->|解析图像源| C[本地 / URL / Base64]
     B -->|组装 prompt + 图像| D[视觉后端适配器]
-    D --> E1[GPT-4o]
+    D --> E1[GPT-5.6 Luna]
     D --> E2[Gemini]
     D --> E3[任何 OpenAI 兼容服务]
     E1 -->|文本描述| B
@@ -96,7 +96,7 @@ graph LR
 ### 环境要求
 
 - **Python 3.11+**
-- 一个视觉模型 API Key（推荐 [OpenAI GPT-4o](https://platform.openai.com/)，或任何 OpenAI 兼容服务如 [阿里通义 Qwen-VL](https://dashscope.aliyun.com/)、[智谱 GLM-4V](https://open.bigmodel.cn/) 等）
+- 一个视觉模型 API Key（推荐 [OpenAI GPT-5.6 Luna](https://platform.openai.com/)——2026-07-31 起降价 80%，每百万 token 输入 $0.2 / 输出 $1.2，定位"快速、实惠的日常主力模型"，适合高频调用与 Agent 工作流；或任何 OpenAI 兼容服务如 [阿里通义 Qwen-VL](https://dashscope.aliyun.com/)、[智谱 GLM-4V](https://open.bigmodel.cn/) 等）
 
 ### 1. 克隆并安装
 
@@ -127,7 +127,7 @@ cp .env.example .env
 ```dotenv
 VISION_PROVIDER=openai
 OPENAI_API_KEY=sk-your-real-key-here
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=gpt-5.6-luna
 # 如果用兼容服务，可改 OPENAI_BASE_URL
 # OPENAI_BASE_URL=https://your-compatible-service/v1
 ```
@@ -256,7 +256,7 @@ DeepEye 暴露三个符合 MCP 规范的工具：
 |------|--------|------|
 | `VISION_PROVIDER` | `openai` | 视觉后端提供者：`openai` / `gemini` / `custom`（目前仅 `openai` 完整实现） |
 | `OPENAI_API_KEY` | — | OpenAI 或兼容服务的 API Key |
-| `OPENAI_MODEL` | `gpt-4o` | 视觉模型名称 |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | 视觉模型名称 |
 | `OPENAI_BASE_URL` | — | 接口地址，留空用官方 `https://api.openai.com/v1`；可改为 Azure / 代理 / 兼容服务 |
 | `GEMINI_API_KEY` | — | Gemini 后端（预留） |
 | `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini 模型名称（预留） |
@@ -293,7 +293,7 @@ DeepEye 兼容任何支持 MCP 协议的客户端。以下为常见配置示例�
       "env": {
         "VISION_PROVIDER": "openai",
         "OPENAI_API_KEY": "sk-your-key",
-        "OPENAI_MODEL": "gpt-4o"
+        "OPENAI_MODEL": "gpt-5.6-luna"
       }
     }
   }
@@ -429,7 +429,7 @@ deepeye/
 - [ ] 图片预处理（智能压缩、超大图自动缩放）
 - [ ] 结果缓存（相同图片 + prompt 命中缓存）
 - [ ] 视频关键帧分析工具
-- [ ] 多模型链路（先 GPT-4o 识别类型，再切专业模型处理）
+- [ ] 多模型链路（先 GPT-5.6 Luna 识别类型，再切专业模型处理）
 - [ ] 发布到 PyPI
 
 ---
