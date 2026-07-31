@@ -93,6 +93,12 @@ Core flow: **receive image → call vision model → return text description**. 
 
 ## Quick Start
 
+### Install with a Coding Agent
+
+If you use an AI coding agent (Claude Code / Codex / Cursor / Cline), send it this prompt and let it handle cloning, installing, and configuring for you:
+
+> Clone https://github.com/Favio8/deepeye.git, create a Python virtual environment, run `pip install -e .` to install DeepEye, then walk me through configuring a vision model API key using `.env.example` and wire it into my current MCP client.
+
 ### Prerequisites
 
 - **Python 3.11+**
@@ -278,77 +284,15 @@ OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## MCP Client Integration
 
-DeepEye works with any MCP-compatible client. Common configurations below.
+DeepEye is a standard stdio MCP Server that works with any MCP-compatible client (Claude Code, Codex CLI, opencode, Cursor, Cline, Windsurf, Continue, Zed, Roo Code, etc.). Configuration is consistent across clients: declare the `deepeye` launch command in the MCP config and pass vision backend credentials via the `env` field.
 
-### Claude Desktop
+Minimal example (Claude Code, one-line CLI):
 
-Edit `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "deepeye": {
-      "command": "deepeye",
-      "cwd": "/absolute/path/to/deepeye",
-      "env": {
-        "VISION_PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-your-key",
-        "OPENAI_MODEL": "gpt-5.6-luna"
-      }
-    }
-  }
-}
+```bash
+claude mcp add deepeye -- /path/to/deepeye/.venv/bin/deepeye
 ```
 
-> You can also place a `.env` file in the `cwd` directory; DeepEye will read it on startup.
-
-### Cline (VS Code)
-
-Add to Cline's MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "deepeye": {
-      "command": "deepeye",
-      "cwd": "/absolute/path/to/deepeye",
-      "env": { "OPENAI_API_KEY": "sk-your-key" }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add the same server config under Cursor's settings → MCP.
-
-### Custom agent (Python `mcp` client)
-
-```python
-import asyncio
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-async def main():
-    params = StdioServerParameters(
-        command="deepeye",
-        cwd="/absolute/path/to/deepeye",
-        env={"OPENAI_API_KEY": "sk-your-key"},
-    )
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            print([t.name for t in tools.tools])
-            # Call describe_image
-            result = await session.call_tool(
-                "describe_image",
-                {"image_source": "/path/to/image.png"},
-            )
-            print(result.content[0].text)
-
-asyncio.run(main())
-```
+For the full configuration guide covering 9 clients, see [Coding Agent Integration Guide](docs/coding-agent-integration.md) (currently in Chinese).
 
 ---
 

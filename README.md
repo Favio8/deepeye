@@ -93,6 +93,12 @@ graph LR
 
 ## 快速开始
 
+### 使用 Coding Agent 安装
+
+如果你用 Claude Code / Codex / Cursor / Cline 等 AI coding agent，直接把下面这段发给它，让它帮你完成克隆、安装与配置：
+
+> 克隆 https://github.com/Favio8/deepeye.git，创建 Python 虚拟环境，运行 `pip install -e .` 安装 DeepEye，然后参照 `.env.example` 指导我配置视觉模型 API Key，并帮我接入到当前的 MCP 客户端。
+
 ### 环境要求
 
 - **Python 3.11+**
@@ -278,77 +284,15 @@ OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## MCP 客户端集成
 
-DeepEye 兼容任何支持 MCP 协议的客户端。以下为常见配置示例。
+DeepEye 是标准 stdio MCP Server，可接入任何支持 MCP 的客户端（Claude Code、Codex CLI、opencode、Cursor、Cline、Windsurf、Continue、Zed、Roo Code 等）。各客户端配置方式高度一致：在 MCP 配置中声明 `deepeye` 启动命令，并通过 `env` 字段传入视觉后端凭证。
 
-### Claude Desktop
+最小示例（Claude Code 一行 CLI 接入）：
 
-编辑 `claude_desktop_config.json`：
-
-```json
-{
-  "mcpServers": {
-    "deepeye": {
-      "command": "deepeye",
-      "cwd": "/absolute/path/to/deepeye",
-      "env": {
-        "VISION_PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-your-key",
-        "OPENAI_MODEL": "gpt-5.6-luna"
-      }
-    }
-  }
-}
+```bash
+claude mcp add deepeye -- /path/to/deepeye/.venv/bin/deepeye
 ```
 
-> 也可以在 `cwd` 目录下放一个 `.env` 文件，DeepEye 启动时会自动读取。
-
-### Cline (VS Code)
-
-在 Cline 的 MCP 设置中新增：
-
-```json
-{
-  "mcpServers": {
-    "deepeye": {
-      "command": "deepeye",
-      "cwd": "/absolute/path/to/deepeye",
-      "env": { "OPENAI_API_KEY": "sk-your-key" }
-    }
-  }
-}
-```
-
-### Cursor
-
-在 Cursor 设置 → MCP 中添加同样的 server 配置。
-
-### 自建 Agent（Python `mcp` 客户端）
-
-```python
-import asyncio
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-async def main():
-    params = StdioServerParameters(
-        command="deepeye",
-        cwd="/absolute/path/to/deepeye",
-        env={"OPENAI_API_KEY": "sk-your-key"},
-    )
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            print([t.name for t in tools.tools])
-            # 调用 describe_image
-            result = await session.call_tool(
-                "describe_image",
-                {"image_source": "/path/to/image.png"},
-            )
-            print(result.content[0].text)
-
-asyncio.run(main())
-```
+完整的 9 个客户端配置教程见 [接入 Coding Agent 指南](docs/coding-agent-integration.md)。
 
 ---
 
