@@ -1,14 +1,17 @@
 """DeepEye MCP 工具实现。
 
-三个工具均返回 ``list[TextContent]``：
+四个工具均返回 ``list[TextContent]``：
 - :func:`describe_image`：图片详细描述
 - :func:`extract_text`：OCR 文字提取
 - :func:`ask_about_image`：视觉问答
+- :func:`analyze_layout`：UI 布局结构化分析（返回 JSON）
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 
 from mcp.types import TextContent
 
@@ -19,6 +22,16 @@ from deepeye.vision import create_vision_adapter
 
 _DEFAULT_DESCRIBE_PROMPT = "描述这张图片的主要内容。"
 _OCR_PROMPT = "提取图片中所有文字，保持排版，不加描述。"
+
+# 布局分析 basic 模式提示词：只要求类型 + 文本 + 位置
+_LAYOUT_BASIC_PROMPT = """分析这张 UI 截图的布局结构，返回 JSON。只返回 JSON，不加任何说明文字。
+JSON 格式：
+{"layout_type": "布局类型", "summary": "一句话描述", "elements": [{"type": "元素类型", "text": "文本内容", "position": {"x": 0, "y": 0, "width": 0, "height": 0}, "children": []}]}
+位置坐标用百分比 0-100。元素类型：nav/button/text/image/input/link/icon/card/container/list。"""
+
+# detailed 模式：在 basic 基础上额外要求样式信息
+_LAYOUT_DETAILED_EXTRA = """
+额外为元素返回 styles 字段：{"background_color": "#hex", "text_color": "#hex", "font_size": "14px", "border_radius": "8px", "padding": "12px"}。"""
 
 
 async def _run_vision(image_source: str, prompt: str, model: str | None = None) -> str:
@@ -122,3 +135,40 @@ async def ask_about_image(
         return [TextContent(type="text", text=answer)]
     except Exception as exc:
         return [TextContent(type="text", text=f"视觉问答失败：{exc}")]
+
+
+async def analyze_layout(
+    image_source: str,
+    detail: str = "basic",
+    model: str | None = None,
+) -> list[TextContent]:
+    """UI 布局结构化分析：返回 JSON 字符串，包含元素类型、位置坐标、（可选）样式。
+
+    Args:
+        image_source: 图像来源（本地路径 / 公网 URL / Base64 data URI）。
+        detail: 分析粒度，``"basic"`` 仅返回类型+文本+位置；
+            ``"detailed"`` 额外返回颜色、字号、圆角等样式信息。
+        model: 可选模型名称覆盖。
+
+    Returns:
+        包含 JSON 字符串的 ``list[TextContent]``；模型未返回有效 JSON 时
+        返回错误提示文本。
+    """
+    # 根据粒度拼装提示词
+    if detail == "detailed":
+        prompt = _LAYOUT_BASIC_PROMPT + _LAYOUT_DETAILED_EXTRA
+    else:
+        prompt = _LAYOUT_BASIC_PROMPT
+
+    try:
+        text = await _run_vision(image_source, prompt, model)
+        # 模型可能返回 "说明文字 + JSON"，用正则容错提取
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match is None:
+            return [TextContent(type="text", text="布局分析失败：模型未返回有效 JSON")]
+        json_str = match.group(0)
+        # 校验 JSON 合法性，确保返回的是有效 JSON 字符串
+        parsed = json.loads(json_str)
+        return [TextContent(type="text", text=json.dumps(parsed, ensure_ascii=False))]
+    except Exception as exc:
+        return [TextContent(type="text", text=f"布局分析失败：{exc}")]

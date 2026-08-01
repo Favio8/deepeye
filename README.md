@@ -59,7 +59,7 @@ DeepEye 用 **MCP 协议**把"视觉理解"从模型本体中解耦出来，做�
 
 ## 特性
 
-- **三个核心工具**：`describe_image`（图像描述）、`extract_text`（OCR）、`ask_about_image`（视觉问答）
+- **四个核心工具**：`describe_image`（图像描述）、`extract_text`（OCR）、`ask_about_image`（视觉问答）、`analyze_layout`（UI 布局结构化分析）
 - **标准 MCP 协议**：基于官方 `mcp` 库，stdio 传输，兼容所有 MCP 客户端
 - **三类视觉后端可切换**：策略模式 + 适配器模式，已支持 OpenAI（GPT-5.6 Luna 等）、Google Gemini（gemini-1.5-pro / gemini-2.0-flash 等）、自定义 OpenAI 兼容服务（通义 Qwen-VL / 智谱 / vLLM / Ollama 等），通过 `VISION_PROVIDER` 一键切换，不改代码
 - **三种图像来源**：本地路径 / 公网 URL / Base64 data URI，统一解析
@@ -160,7 +160,7 @@ Server 通过 stdio 与 MCP 客户端通信，单独运行不会输出交互界�
 
 ## 工具一览
 
-DeepEye 暴露三个符合 MCP 规范的工具：
+DeepEye 暴露四个符合 MCP 规范的工具：
 
 ### `describe_image` — 通用图像理解
 
@@ -195,6 +195,18 @@ DeepEye 暴露三个符合 MCP 规范的工具：
 | `question` | string | 是 | 要询问的问题 |
 
 **返回**：针对问题的回答。
+
+### `analyze_layout` — UI 布局结构化分析
+
+对图片进行 UI 布局结构化分析，返回 JSON 格式的布局类型与元素树（类型/位置/样式），适合前端复刻。
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `image_source` | string | 是 | 同上 |
+| `detail` | string | 否 | 分析粒度：`basic`（默认，仅类型 + 文本 + 位置）或 `detailed`（额外返回颜色、字号、圆角等样式） |
+| `model` | string | 否 | 临时指定视觉模型，不传则用配置默认值 |
+
+**返回**：JSON 字符串，包含 `layout_type`（布局类型）、`summary`（一句话描述）与 `elements`（元素树）；每个元素含 `type`、`text`、`position`（百分比坐标）、`children`，`detailed` 模式额外返回 `styles`。
 
 ---
 
@@ -261,6 +273,35 @@ DeepEye 暴露三个符合 MCP 规范的工具：
 返回：
 
 > 图中有两只猫。一只橘猫趴在沙发上，一只黑猫正从门后探出头来。
+
+### 场景：UI 布局结构化分析（前端复刻）
+
+**用户**：
+
+> 分析 `navbar.png` 这个导航栏的布局结构，返回详细样式
+
+**模型内部行为**：调用 `analyze_layout`（detailed 模式）→ 获得结构化 JSON → 基于 JSON 生成复刻代码
+
+返回的 JSON 示例：
+
+```json
+{
+  "layout_type": "header-nav",
+  "summary": "顶部水平导航栏，含 logo 和 4 个链接",
+  "elements": [
+    {
+      "type": "nav",
+      "position": {"x": 0, "y": 0, "width": 100, "height": 8},
+      "styles": {"background_color": "#1a1a2e", "padding": "16px 24px"},
+      "children": [
+        {"type": "image", "text": "Logo", "position": {"x": 2, "y": 2, "width": 10, "height": 4}},
+        {"type": "link", "text": "首页", "position": {"x": 60, "y": 2, "width": 8, "height": 4}},
+        {"type": "link", "text": "产品", "position": {"x": 70, "y": 2, "width": 8, "height": 4}}
+      ]
+    }
+  ]
+}
+```
 
 ---
 
@@ -357,7 +398,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-测试覆盖图像源解析、视觉适配器工厂、三个工具的 prompt 组装逻辑，全部使用 mock，不发起真实 API 调用。
+测试覆盖图像源解析、视觉适配器工厂、四个工具的 prompt 组装逻辑，全部使用 mock，不发起真实 API 调用。
 
 ### 代码结构
 
@@ -379,7 +420,7 @@ deepeye/
 │   └── deepeye/
 │       ├── __init__.py         # __version__
 │       ├── server.py           # MCP Server 组装（mcp 2.0 API）
-│       ├── tools.py            # 三个 MCP 工具实现
+│       ├── tools.py            # 四个 MCP 工具实现
 │       ├── image_utils.py      # 图像源解析（本地/URL/data URI）
 │       ├── config.py           # pydantic-settings 配置加载
 │       └── vision/

@@ -1,4 +1,4 @@
-"""``deepeye.tools`` 三个 MCP 工具函数单元测试。
+"""``deepeye.tools`` MCP 工具函数单元测试。
 
 通过 ``unittest.mock.patch`` 替换 ``deepeye.tools.create_vision_adapter``，
 避免任何真实 API 调用；使用 data URI 作为图像源，避免本地文件/网络 IO。
@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from mcp.types import TextContent
@@ -15,6 +16,7 @@ from deepeye.config import settings
 from deepeye.tools import (
     _DEFAULT_DESCRIBE_PROMPT,
     _OCR_PROMPT,
+    analyze_layout,
     ask_about_image,
     describe_image,
     extract_text,
@@ -240,3 +242,128 @@ async def test_cache_returns_cached_text_directly(mock_factory, monkeypatch):
     assert mock_adapter2.describe.await_count == 0
 
     vision_cache.clear()
+
+
+# ---------------------------------------------------------------------------
+# analyze_layout
+# ---------------------------------------------------------------------------
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_basic(mock_factory):
+    """basic 模式：mock 返回纯 JSON，验证返回 list[TextContent] 且 text 是 JSON 字符串。"""
+    mock_adapter = _build_mock_adapter(
+        return_value='{"layout_type":"header-nav","summary":"test","elements":[]}'
+    )
+    mock_factory.return_value = mock_adapter
+
+    result = await analyze_layout(image_source=_DATA_URI)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], TextContent)
+    # text 应为合法 JSON 字符串，可被解析
+    parsed = json.loads(result[0].text)
+    assert parsed["layout_type"] == "header-nav"
+    assert parsed["summary"] == "test"
+    assert parsed["elements"] == []
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_detailed(mock_factory):
+    """detailed 模式：mock 返回含 styles 的 JSON，验证 prompt 中包含样式相关指令。"""
+    mock_adapter = _build_mock_adapter(
+        return_value=(
+            '{"layout_type":"nav","summary":"s","elements":['
+            '{"type":"button","text":"btn",'
+            '"position":{"x":0,"y":0,"width":10,"height":5},'
+            '"styles":{"background_color":"#fff"}}]}'
+        )
+    )
+    mock_factory.return_value = mock_adapter
+
+    result = await analyze_layout(image_source=_DATA_URI, detail="detailed")
+
+    # 验证 prompt 中包含样式相关指令
+    call = mock_adapter.describe.await_args
+    prompt = call.args[2]
+    assert "styles" in prompt or "颜色" in prompt or "color" in prompt
+    # 结果应为合法 JSON，且保留 styles 字段
+    assert isinstance(result, list)
+    assert len(result) == 1
+    parsed = json.loads(result[0].text)
+    assert parsed["elements"][0]["styles"]["background_color"] == "#fff"
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_json_with_text(mock_factory):
+    """模型返回 "说明文字 + JSON" 时应能提取出 JSON。"""
+    mock_adapter = _build_mock_adapter(
+        return_value='这是结果：\n{"layout_type":"nav"}'
+    )
+    mock_factory.return_value = mock_adapter
+
+    result = await analyze_layout(image_source=_DATA_URI)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], TextContent)
+    # text 应为合法 JSON 字符串，可被解析
+    parsed = json.loads(result[0].text)
+    assert parsed["layout_type"] == "nav"
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_no_json(mock_factory):
+    """模型未返回 JSON 时应返回包含 "未返回有效 JSON" 的错误文本。"""
+    mock_adapter = _build_mock_adapter(return_value="我无法分析")
+    mock_factory.return_value = mock_adapter
+
+    result = await analyze_layout(image_source=_DATA_URI)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], TextContent)
+    assert "未返回有效 JSON" in result[0].text
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_exception(mock_factory):
+    """适配器抛异常时应返回包含 "布局分析失败" 的友好错误文本。"""
+    mock_adapter = MagicMock()
+    mock_adapter.describe = AsyncMock(side_effect=RuntimeError("adapter boom"))
+    mock_factory.return_value = mock_adapter
+
+    result = await analyze_layout(image_source=_DATA_URI)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0], TextContent)
+    assert "布局分析失败" in result[0].text
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_prompt_basic(mock_factory):
+    """basic 模式 prompt 不应包含样式相关字段（styles / color）。"""
+    mock_adapter = _build_mock_adapter()
+    mock_factory.return_value = mock_adapter
+
+    await analyze_layout(image_source=_DATA_URI, detail="basic")
+
+    call = mock_adapter.describe.await_args
+    prompt = call.args[2]
+    assert "styles" not in prompt
+    assert "color" not in prompt
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_analyze_layout_prompt_detailed(mock_factory):
+    """detailed 模式 prompt 应包含样式相关字段（styles / color）。"""
+    mock_adapter = _build_mock_adapter()
+    mock_factory.return_value = mock_adapter
+
+    await analyze_layout(image_source=_DATA_URI, detail="detailed")
+
+    call = mock_adapter.describe.await_args
+    prompt = call.args[2]
+    assert "styles" in prompt or "color" in prompt

@@ -28,7 +28,7 @@ from mcp.types import (
 )
 
 from deepeye import __version__
-from deepeye.tools import ask_about_image, describe_image, extract_text
+from deepeye.tools import analyze_layout, ask_about_image, describe_image, extract_text
 
 _TOOLS: list[Tool] = [
     Tool(
@@ -89,13 +89,26 @@ _TOOLS: list[Tool] = [
             "required": ["image_source", "question"],
         },
     ),
+    Tool(
+        name="analyze_layout",
+        description="UI 布局结构化分析：返回 JSON，包含元素类型、位置坐标、样式（detailed 模式）。适合前端复刻场景。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "image_source": {"type": "string", "description": "图片来源：本地绝对路径、公网URL或Base64数据"},
+                "detail": {"type": "string", "description": "分析粒度：basic（类型+位置）或 detailed（含颜色/字号等样式）", "default": "basic", "enum": ["basic", "detailed"]},
+                "model": {"type": "string", "description": "指定视觉模型，不填使用默认配置"}
+            },
+            "required": ["image_source"]
+        }
+    ),
 ]
 
 
 async def list_tools(
     ctx: ServerRequestContext, params: PaginatedRequestParams | None
 ) -> ListToolsResult:
-    """返回 DeepEye 暴露的三个工具定义。"""
+    """返回 DeepEye 暴露的工具定义。"""
     return ListToolsResult(tools=_TOOLS)
 
 
@@ -128,6 +141,8 @@ async def call_tool(
             image_source=arguments["image_source"],
             question=arguments["question"],
         )
+    elif name == "analyze_layout":
+        content = await analyze_layout(**arguments)
     else:
         raise ValueError(f"未知工具: {name}")
 

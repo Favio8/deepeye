@@ -4,7 +4,7 @@
 
 ## 简介
 
-DeepEye 是一个 **stdio 类型的 MCP Server**，为纯文本模型（如 DeepSeek V4 Flash）提供视觉能力。它通过标准输入输出以 JSON-RPC 协议与 MCP 客户端通信，将图像理解、视觉推理等能力以 MCP 工具的形式暴露给宿主应用。
+DeepEye 是一个 **stdio 类型的 MCP Server**，为纯文本模型（如 DeepSeek V4 Flash）提供视觉能力。它通过标准输入输出以 JSON-RPC 协议与 MCP 客户端通信，将图像理解、视觉推理等能力以 MCP 工具的形式暴露给宿主应用。DeepEye 提供四个核心工具：`describe_image`（图像描述）、`extract_text`（OCR 文字提取）、`ask_about_image`（视觉问答）、`analyze_layout`（UI 布局结构化分析，返回包含布局类型与元素树的 JSON，适合前端复刻）。
 
 启动命令：`deepeye`（`pip install -e .` 后注册的 console script 入口），等价于 `python -m deepeye.server`。配置通过环境变量传递（pydantic-settings 读取，环境变量优先于 `.env` 文件）。
 

@@ -59,7 +59,7 @@ DeepEye uses the **MCP protocol** to decouple "visual understanding" from the mo
 
 ## Features
 
-- **Three core tools**: `describe_image` (caption), `extract_text` (OCR), `ask_about_image` (VQA)
+- **Four core tools**: `describe_image` (caption), `extract_text` (OCR), `ask_about_image` (VQA), `analyze_layout` (UI layout structured analysis)
 - **Standard MCP protocol**: built on the official `mcp` library, stdio transport, compatible with all MCP clients
 - **Three switchable vision backends**: strategy + adapter pattern; supports OpenAI (GPT-5.6 Luna, etc.), Google Gemini (gemini-1.5-pro / gemini-2.0-flash, etc.), and custom OpenAI-compatible services (Alibaba Qwen-VL / Zhipu / vLLM / Ollama, etc.). Switch instantly via `VISION_PROVIDER` — no code changes required
 - **Three image sources**: local path / public URL / Base64 data URI, unified parsing
@@ -160,7 +160,7 @@ The server speaks stdio with MCP clients; running it standalone won't open an in
 
 ## Tools
 
-DeepEye exposes three MCP-compliant tools:
+DeepEye exposes four MCP-compliant tools:
 
 ### `describe_image` — General image understanding
 
@@ -195,6 +195,18 @@ Answers a specific question about the image.
 | `question` | string | yes | The question to ask |
 
 **Returns**: The answer to the question.
+
+### `analyze_layout` — UI layout structured analysis
+
+Produces a structured JSON description of an image's UI layout — layout type plus an element tree (type / position / styles) — ideal for frontend replication.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `image_source` | string | yes | Same as above |
+| `detail` | string | no | Level of detail: `basic` (default, type + text + position only) or `detailed` (also returns colors, font size, border radius, and other styles) |
+| `model` | string | no | Override the vision model for this call |
+
+**Returns**: A JSON string with `layout_type`, `summary`, and an `elements` tree; each element includes `type`, `text`, `position` (percentage coordinates), and `children`. `detailed` mode additionally returns `styles`.
 
 ---
 
@@ -261,6 +273,35 @@ Returns:
 Returns:
 
 > There are two cats. An orange tabby is lying on the sofa, and a black cat is peeking out from behind the door.
+
+### Scenario: UI layout structured analysis (frontend replication)
+
+**User**:
+
+> Analyze the layout of `navbar.png` and return detailed styles
+
+**Model internals**: calls `analyze_layout` (detailed mode) → gets structured JSON → generates replication code from the JSON
+
+Example JSON returned:
+
+```json
+{
+  "layout_type": "header-nav",
+  "summary": "Top horizontal navigation bar with logo and 4 links",
+  "elements": [
+    {
+      "type": "nav",
+      "position": {"x": 0, "y": 0, "width": 100, "height": 8},
+      "styles": {"background_color": "#1a1a2e", "padding": "16px 24px"},
+      "children": [
+        {"type": "image", "text": "Logo", "position": {"x": 2, "y": 2, "width": 10, "height": 4}},
+        {"type": "link", "text": "Home", "position": {"x": 60, "y": 2, "width": 8, "height": 4}},
+        {"type": "link", "text": "Products", "position": {"x": 70, "y": 2, "width": 8, "height": 4}}
+      ]
+    }
+  ]
+}
+```
 
 ---
 
@@ -357,7 +398,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-Tests cover image source parsing, the vision adapter factory, and prompt assembly for all three tools. All tests use mocks — no real API calls are made.
+Tests cover image source parsing, the vision adapter factory, and prompt assembly for all four tools. All tests use mocks — no real API calls are made.
 
 ### Code layout
 
@@ -380,7 +421,7 @@ deepeye/
 │   └── deepeye/
 │       ├── __init__.py         # __version__
 │       ├── server.py           # MCP Server assembly (mcp 2.0 API)
-│       ├── tools.py            # The three MCP tools
+│       ├── tools.py            # The four MCP tools
 │       ├── image_utils.py      # Image source parsing (local / URL / data URI)
 │       ├── config.py           # pydantic-settings config loading
 │       └── vision/
