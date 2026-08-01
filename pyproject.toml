@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "deepeye"
+name = "deepeye-mcp"
 version = "0.1.0"
 description = "DeepEye - 为纯文本大模型提供视觉能力的 MCP Server（图像描述 / OCR / 视觉问答）"
 readme = "README.md"

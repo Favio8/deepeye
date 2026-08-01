@@ -95,21 +95,29 @@ graph LR
 
 ## 快速开始
 
+### 从 PyPI 安装（推荐）
+
+```bash
+pip install deepeye-mcp
+```
+
+安装后命令 `deepeye` 即可用，无需克隆源码。
+
 ### 使用 Coding Agent 安装
 
-如果你用 Claude Code / Codex / Cursor / Cline 等 AI coding agent，直接把下面这段发给它，让它帮你完成克隆、安装与配置：
+如果你用 Claude Code / Codex / Cursor / Cline 等 AI coding agent，直接把下面这段发给它，让它帮你完成安装与配置：
 
-> 克隆 https://github.com/Favio8/deepeye.git，创建 Python 虚拟环境，运行 `pip install -e .` 安装 DeepEye，然后参照 `.env.example` 指导我配置视觉模型 API Key，并帮我接入到当前的 MCP 客户端。
+> 安装 Python 包 `deepeye-mcp`（pip install deepeye-mcp），然后参照 https://github.com/Favio8/deepeye 的 `.env.example` 指导我配置视觉模型 API Key，并帮我接入到当前的 MCP 客户端。
 
 ### 环境要求
 
 - **Python 3.11+**
 - 一个视觉模型 API Key（推荐 [OpenAI GPT-5.6 Luna](https://platform.openai.com/)——2026-07-31 起降价 80%，每百万 token 输入 $0.2 / 输出 $1.2，定位"快速、实惠的日常主力模型"，适合高频调用与 Agent 工作流；或任何 OpenAI 兼容服务如 [阿里通义 Qwen-VL](https://dashscope.aliyun.com/)、[智谱 GLM-4V](https://open.bigmodel.cn/) 等）
 
-### 1. 克隆并安装
+### 从源码安装（开发者）
 
 ```bash
-git clone <your-repo-url> deepeye
+git clone https://github.com/Favio8/deepeye.git
 cd deepeye
 
 # 推荐使用虚拟环境
@@ -119,7 +127,7 @@ python -m venv .venv
 # macOS / Linux
 source .venv/bin/activate
 
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 安装后，命令 `deepeye` 会注册到环境中。

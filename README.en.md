@@ -95,21 +95,29 @@ Core flow: **receive image → call vision model → return text description**. 
 
 ## Quick Start
 
+### Install from PyPI (Recommended)
+
+```bash
+pip install deepeye-mcp
+```
+
+The `deepeye` command is available immediately — no need to clone the source.
+
 ### Install with a Coding Agent
 
-If you use an AI coding agent (Claude Code / Codex / Cursor / Cline), send it this prompt and let it handle cloning, installing, and configuring for you:
+If you use an AI coding agent (Claude Code / Codex / Cursor / Cline), send it this prompt and let it handle installing and configuring for you:
 
-> Clone https://github.com/Favio8/deepeye.git, create a Python virtual environment, run `pip install -e .` to install DeepEye, then walk me through configuring a vision model API key using `.env.example` and wire it into my current MCP client.
+> Install the Python package `deepeye-mcp` (pip install deepeye-mcp), then walk me through configuring a vision model API key using the `.env.example` from https://github.com/Favio8/deepeye and wire it into my current MCP client.
 
 ### Prerequisites
 
 - **Python 3.11+**
 - A vision model API key (recommend [OpenAI GPT-5.6 Luna](https://platform.openai.com/) — prices dropped 80% on 2026-07-31, now $0.2 / 1M input tokens and $1.2 / 1M output tokens; positioned as a "fast, affordable model for everyday work", ideal for high-volume calls and agent workflows; or any OpenAI-compatible service such as [Alibaba Qwen-VL](https://dashscope.aliyun.com/), [Zhipu GLM-4V](https://open.bigmodel.cn/), etc.)
 
-### 1. Clone and install
+### Install from source (Developers)
 
 ```bash
-git clone <your-repo-url> deepeye
+git clone https://github.com/Favio8/deepeye.git
 cd deepeye
 
 # Recommended: isolated virtual environment
@@ -119,7 +127,7 @@ python -m venv .venv
 # macOS / Linux
 source .venv/bin/activate
 
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 After installation, the `deepeye` command is registered on your PATH.
