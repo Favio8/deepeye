@@ -367,6 +367,8 @@ claude mcp add deepeye -- /path/to/deepeye/.venv/bin/deepeye
 
 For the full configuration guide covering 9 clients, see [Coding Agent Integration Guide](docs/coding-agent-integration.md) (currently in Chinese).
 
+> **opencode users**: Install the [opencode-easy-vision](https://github.com/devadathanmb/opencode-easy-vision) plugin to enable seamless "paste image → auto-analyze" workflow. The plugin saves pasted images to temp files and automatically invokes DeepEye's `describe_image` tool. See the [opencode section](docs/coding-agent-integration.md#进阶粘贴图片自动调用-deepeyeopencode-easy-vision-插件) in the integration guide.
+
 ---
 
 ## Supported Vision Backends

@@ -118,11 +118,50 @@ Windows 示例（注意反斜杠转义）：
 
 执行 `opencode mcp list`，DeepEye 状态应为 `connected`。
 
+### 进阶：粘贴图片自动调用 DeepEye（opencode-easy-vision 插件）
+
+默认情况下，在 opencode 中粘贴图片后，纯文本模型（如 DeepSeek V4 Flash）无法直接看到图片，需要手动提供文件路径。安装 [opencode-easy-vision](https://github.com/devadathanmb/opencode-easy-vision) 插件后，粘贴的图片会自动保存为临时文件并注入路径，模型即可自动调用 DeepEye 工具分析图片——实现"粘贴图片 → 问问题 → 出结果"的无缝体验。
+
+**安装插件**：
+
+```bash
+opencode plugin opencode-easy-vision --global
+```
+
+**配置插件指向 DeepEye**：
+
+在 `~/.config/opencode/opencode.json` 中添加 `plugin` 字段：
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-easy-vision"],
+  "mcp": {
+    "deepeye": { ... }
+  }
+}
+```
+
+然后创建 `~/.config/opencode/opencode-easy-vision.json`，指定 DeepEye 工具：
+
+```json
+{
+  "models": ["*"],
+  "imageAnalysisTool": "deepeye_describe_image"
+}
+```
+
+- `"models": ["*"]`：对所有模型生效（不限于 MiniMax）
+- `"imageAnalysisTool": "deepeye_describe_image"`：粘贴图片时自动调用 DeepEye 的 `describe_image` 工具
+
+配置完成后重启 opencode，直接在对话中粘贴图片即可。
+
 ### 注意事项
 
 - opencode 的 `command` 是数组形式（与其他多数客户端的 `command` 字符串 + `args` 数组不同）。
 - Windows 路径反斜杠在 JSON 中需转义为 `\\`。
 - 配置文件优先级：项目级 `.opencode/opencode.json` > 项目根 `opencode.json` > 全局。
+- `opencode-easy-vision` 插件的 `imageAnalysisTool` 值为 `<mcp-server-key>_<tool-name>` 格式，即 `deepeye_describe_image`。
 
 ---
 

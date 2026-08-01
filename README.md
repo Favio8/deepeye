@@ -367,6 +367,8 @@ claude mcp add deepeye -- /path/to/deepeye/.venv/bin/deepeye
 
 完整的 9 个客户端配置教程见 [接入 Coding Agent 指南](docs/coding-agent-integration.md)。
 
+> **opencode 用户**：安装 [opencode-easy-vision](https://github.com/devadathanmb/opencode-easy-vision) 插件后，粘贴图片会自动保存为临时文件并调用 DeepEye 分析，实现"粘贴即用"的无缝体验。配置方法见 [接入指南的 opencode 章节](docs/coding-agent-integration.md#进阶粘贴图片自动调用-deepeyeopencode-easy-vision-插件)。
+
 ---
 
 ## 支持的视觉后端
