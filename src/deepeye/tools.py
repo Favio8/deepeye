@@ -20,7 +20,13 @@ from deepeye.config import settings
 from deepeye.image_utils import parse_image_source, preprocess_image
 from deepeye.vision import create_vision_adapter
 
-_DEFAULT_DESCRIBE_PROMPT = "描述这张图片的主要内容。"
+_DEFAULT_DESCRIBE_PROMPT = (
+    "分析这张图片，按以下维度分点描述：\n"
+    "1. 布局结构：各元素的位置关系和层级\n"
+    "2. 主要元素：具体列出每个元素及其文字内容\n"
+    "3. 颜色与样式：背景色、文字色、关键配色\n"
+    "4. 潜在问题：如有遮挡、重叠、对齐异常、内容缺失等"
+)
 _OCR_PROMPT = "提取图片中所有文字，保持排版，不加描述。"
 
 # 布局分析 basic 模式提示词：只要求类型 + 文本 + 位置
