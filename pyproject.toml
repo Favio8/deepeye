@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepeye-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "DeepEye - 为纯文本大模型提供视觉能力的 MCP Server（图像描述 / OCR / 视觉问答）"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-deepeye = "deepeye.server:main"
+deepeye = "deepeye.server:run"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -59,9 +59,22 @@ class GeminiVisionAdapter(VisionAdapter):
         }
         headers = {"Content-Type": "application/json"}
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, params=params, json=payload, headers=headers)
-            response.raise_for_status()
+        timeout = settings.request_timeout
+        last_exc: Exception | None = None
+        for attempt in range(settings.max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(url, params=params, json=payload, headers=headers)
+                    response.raise_for_status()
+                break
+            except (httpx.TimeoutException, httpx.TransportError) as exc:
+                last_exc = exc
+                if attempt < settings.max_retries:
+                    continue
+                raise
+        else:
+            if last_exc:
+                raise last_exc
 
         data = response.json()
         return data["candidates"][0]["content"]["parts"][0]["text"].strip()

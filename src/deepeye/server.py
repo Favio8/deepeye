@@ -152,5 +152,27 @@ async def main() -> None:
         await server.run(read_stream, write_stream, init_options)
 
 
-if __name__ == "__main__":
+def run() -> None:
+    """同步入口 wrapper（供 console_scripts 使用）。
+
+    ``main`` 是 ``async def``，setuptools 生成的 exe 执行
+    ``sys.exit(main())`` 只创建 coroutine 不会 await，进程秒退。
+    本 wrapper 通过 ``asyncio.run`` 正常驱动事件循环。
+    同时在 Windows 下强制 stdout/stderr 使用 UTF-8，避免中文乱码。
+    """
+    import sys
+
+    if sys.platform == "win32":
+        for stream_name in ("stdout", "stderr"):
+            stream = getattr(sys, stream_name, None)
+            if stream is not None and hasattr(stream, "reconfigure"):
+                try:
+                    stream.reconfigure(encoding="utf-8")
+                except Exception:
+                    pass
+
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()

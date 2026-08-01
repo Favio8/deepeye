@@ -53,5 +53,11 @@ class Settings(BaseSettings):
     # 缓存存活秒数（TTL）
     cache_ttl: int = 3600
 
+    # ---------- 网络请求 ----------
+    # 视觉后端 HTTP 请求超时（秒）
+    request_timeout: float = 60.0
+    # 失败重试次数（仅对网络/超时错误重试，不对 4xx 重试）
+    max_retries: int = 2
+
 
 settings = Settings()

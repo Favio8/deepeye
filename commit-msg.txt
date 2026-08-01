@@ -1,0 +1,11 @@
+🐛 fix: entry point crash + configurable timeout/retry + win utf-8
+
+Critical fix: console_scripts entry pointed to async main(), causing
+setuptools-generated exe to create a coroutine without awaiting it,
+making the process exit immediately and MCP server never start.
+
+- Add sync wrapper run() in server.py, entry point now deepeye.server:run
+- Windows: force stdout/stderr UTF-8 to fix Chinese garbled output
+- Config: add request_timeout (default 60s) and max_retries (default 2)
+- All three adapters read config for timeout and retry on network errors
+- Bump version to 0.1.1
