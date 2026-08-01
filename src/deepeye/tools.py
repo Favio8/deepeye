@@ -17,10 +17,8 @@ from deepeye.config import settings
 from deepeye.image_utils import parse_image_source, preprocess_image
 from deepeye.vision import create_vision_adapter
 
-_DEFAULT_DESCRIBE_PROMPT = (
-    "请详细描述这张图片的内容，包括主要对象、场景、动作、色彩和氛围。"
-)
-_OCR_PROMPT = "请仅提取并返回图片中的所有文字，不要添加任何额外描述。保持原文排版格式。"
+_DEFAULT_DESCRIBE_PROMPT = "描述这张图片的主要内容。"
+_OCR_PROMPT = "提取图片中所有文字，保持排版，不加描述。"
 
 
 async def _run_vision(image_source: str, prompt: str, model: str | None = None) -> str:
@@ -67,14 +65,17 @@ async def describe_image(
 
     Args:
         image_source: 图像来源（本地路径 / 公网 URL / Base64 data URI）。
-        prompt: 描述提示词，默认为详细描述。
+        prompt: 描述提示词，默认为简洁描述。
         model: 可选模型名称覆盖。
 
     Returns:
         包含图片描述文本的 ``list[TextContent]``。
     """
-    description = await _run_vision(image_source, prompt, model)
-    return [TextContent(type="text", text=f"图片分析结果：\n{description}")]
+    try:
+        description = await _run_vision(image_source, prompt, model)
+        return [TextContent(type="text", text=f"图片分析结果：\n{description}")]
+    except Exception as exc:
+        return [TextContent(type="text", text=f"图片分析失败：{exc}")]
 
 
 async def extract_text(
@@ -95,8 +96,11 @@ async def extract_text(
     prompt = _OCR_PROMPT
     if language != "auto":
         prompt += f" 优先识别语言：{language}"
-    text = await _run_vision(image_source, prompt)
-    return [TextContent(type="text", text=text)]
+    try:
+        text = await _run_vision(image_source, prompt)
+        return [TextContent(type="text", text=text)]
+    except Exception as exc:
+        return [TextContent(type="text", text=f"OCR 失败：{exc}")]
 
 
 async def ask_about_image(
@@ -112,6 +116,9 @@ async def ask_about_image(
     Returns:
         包含答案的 ``list[TextContent]``。
     """
-    prompt = f"请根据图片内容回答以下问题：{question}"
-    answer = await _run_vision(image_source, prompt)
-    return [TextContent(type="text", text=answer)]
+    prompt = f"根据图片回答：{question}"
+    try:
+        answer = await _run_vision(image_source, prompt)
+        return [TextContent(type="text", text=answer)]
+    except Exception as exc:
+        return [TextContent(type="text", text=f"视觉问答失败：{exc}")]

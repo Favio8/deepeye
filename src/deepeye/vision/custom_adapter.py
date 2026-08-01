@@ -61,7 +61,7 @@ class CustomVisionAdapter(VisionAdapter):
                     ],
                 }
             ],
-            "max_tokens": 1024,
+            "max_tokens": settings.max_tokens,
         }
         headers = {"Content-Type": "application/json"}
         if self.api_key:

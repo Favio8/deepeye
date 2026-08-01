@@ -55,7 +55,7 @@ class OpenAIVisionAdapter(VisionAdapter):
                     ],
                 }
             ],
-            "max_tokens": 1024,
+            "max_tokens": settings.max_tokens,
         }
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -69,14 +69,21 @@ class OpenAIVisionAdapter(VisionAdapter):
                     response = await client.post(url, json=payload, headers=headers)
                     response.raise_for_status()
                 break
-            except (httpx.TimeoutException, httpx.TransportError) as exc:
+            except httpx.TimeoutException as exc:
                 last_exc = exc
                 if attempt < settings.max_retries:
                     continue
-                raise
-        else:
-            if last_exc:
-                raise last_exc
+                raise RuntimeError(
+                    f"视觉模型请求超时（{timeout}s），已重试 {attempt} 次。"
+                    f"建议：1) 缩短 prompt；2) 增大 REQUEST_TIMEOUT；3) 换更快的 API 端点。"
+                ) from exc
+            except httpx.TransportError as exc:
+                last_exc = exc
+                if attempt < settings.max_retries:
+                    continue
+                raise RuntimeError(
+                    f"网络传输错误：{exc}。建议检查网络或 OPENAI_BASE_URL 配置。"
+                ) from exc
 
         data = response.json()
         return data["choices"][0]["message"]["content"].strip()

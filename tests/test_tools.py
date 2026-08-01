@@ -149,7 +149,7 @@ async def test_ask_about_image_prompt_assembly(mock_factory):
     )
 
     call = mock_adapter.describe.await_args
-    assert call.args[2] == "请根据图片内容回答以下问题：图中有几只猫？"
+    assert call.args[2] == "根据图片回答：图中有几只猫？"
 
     assert isinstance(result, list)
     assert len(result) == 1
