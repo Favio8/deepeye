@@ -401,7 +401,7 @@ deepeye/
 - [ ] Tesseract / PaddleOCR 本地 OCR 后端
 - [ ] 视频关键帧分析工具
 - [ ] 多模型链路（先 GPT-5.6 Luna 识别类型，再切专业模型处理）
-- [ ] 发布到 PyPI
+- [x] 发布到 PyPI（`pip install deepeye-mcp`）
 
 ---
 

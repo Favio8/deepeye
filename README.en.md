@@ -402,7 +402,7 @@ deepeye/
 - [ ] Tesseract / PaddleOCR local OCR backend
 - [ ] Video keyframe analysis tool
 - [ ] Multi-model pipeline (e.g., GPT-5.6 Luna classifies first, then routes to a specialized model)
-- [ ] Publish to PyPI
+- [x] Publish to PyPI (`pip install deepeye-mcp`)
 
 ---
 
