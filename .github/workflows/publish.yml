@@ -6,6 +6,7 @@ on:
       - "v*"
 
 permissions:
+  id-token: write  # PyPI Trusted Publisher (OIDC) 所需
   contents: read
 
 jobs:
@@ -31,5 +32,3 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
