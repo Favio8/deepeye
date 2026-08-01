@@ -10,6 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from mcp.types import TextContent
 
+from deepeye.cache import vision_cache
+from deepeye.config import settings
 from deepeye.tools import (
     _DEFAULT_DESCRIBE_PROMPT,
     _OCR_PROMPT,
@@ -153,3 +155,88 @@ async def test_ask_about_image_prompt_assembly(mock_factory):
     assert len(result) == 1
     assert isinstance(result[0], TextContent)
     assert result[0].text == "mocked description"
+
+
+# ---------------------------------------------------------------------------
+# 缓存集成（cache_enabled=True 时第二次相同调用不触发适配器）
+# ---------------------------------------------------------------------------
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_cache_enabled_second_call_hits_cache(mock_factory, monkeypatch):
+    """开启缓存后，第二次相同调用应命中缓存，不再次调用适配器。"""
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    vision_cache.clear()  # 确保起始状态干净
+
+    mock_adapter = _build_mock_adapter(return_value="first-result")
+    mock_factory.return_value = mock_adapter
+
+    # 第一次调用：未命中缓存，调用适配器
+    result1 = await describe_image(image_source=_DATA_URI)
+    assert mock_adapter.describe.await_count == 1
+    assert "first-result" in result1[0].text
+
+    # 第二次相同调用：应命中缓存，适配器不再被调用
+    result2 = await describe_image(image_source=_DATA_URI)
+    assert mock_adapter.describe.await_count == 1  # 仍为 1，未新增调用
+    assert "first-result" in result2[0].text
+
+    # 清理：恢复缓存状态
+    vision_cache.clear()
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_cache_disabled_calls_adapter_each_time(mock_factory, monkeypatch):
+    """关闭缓存时，每次调用都应触发适配器。"""
+    monkeypatch.setattr(settings, "cache_enabled", False)
+    vision_cache.clear()
+
+    mock_adapter = _build_mock_adapter(return_value="result")
+    mock_factory.return_value = mock_adapter
+
+    await describe_image(image_source=_DATA_URI)
+    await describe_image(image_source=_DATA_URI)
+
+    assert mock_adapter.describe.await_count == 2
+
+    vision_cache.clear()
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_cache_different_prompt_does_not_hit(mock_factory, monkeypatch):
+    """相同图片但不同 prompt 应产生不同 key，缓存不命中。"""
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    vision_cache.clear()
+
+    mock_adapter = _build_mock_adapter(return_value="cached-desc")
+    mock_factory.return_value = mock_adapter
+
+    await describe_image(image_source=_DATA_URI, prompt="描述A")
+    await describe_image(image_source=_DATA_URI, prompt="描述B")
+
+    # 两次不同 prompt，应调用适配器两次
+    assert mock_adapter.describe.await_count == 2
+
+    vision_cache.clear()
+
+
+@patch("deepeye.tools.create_vision_adapter")
+async def test_cache_returns_cached_text_directly(mock_factory, monkeypatch):
+    """缓存命中时应直接返回缓存文本（未经适配器重新生成）。"""
+    monkeypatch.setattr(settings, "cache_enabled", True)
+    vision_cache.clear()
+
+    # 第一次调用返回 "v1"
+    mock_adapter = _build_mock_adapter(return_value="v1")
+    mock_factory.return_value = mock_adapter
+    await describe_image(image_source=_DATA_URI)
+
+    # 切换 mock 返回 "v2"，但缓存命中时不应调用，结果仍是 "v1"
+    mock_adapter2 = _build_mock_adapter(return_value="v2")
+    mock_factory.return_value = mock_adapter2
+
+    result = await describe_image(image_source=_DATA_URI)
+    assert "v1" in result[0].text
+    assert mock_adapter2.describe.await_count == 0
+
+    vision_cache.clear()

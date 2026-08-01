@@ -7,16 +7,19 @@ URL 下载通过 mock ``httpx.AsyncClient`` 避免真实网络 IO。
 from __future__ import annotations
 
 import base64
+import io
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from deepeye.config import settings
 from deepeye.image_utils import (
     _parse_data_uri,
     load_image_as_base64,
     load_image_from_url_as_base64,
     parse_image_source,
+    preprocess_image,
 )
 
 
@@ -194,3 +197,96 @@ async def test_parse_image_source_url(mock_client_cls):
 
     assert b64_data == base64.b64encode(raw).decode("ascii")
     assert mime_type == "image/webp"
+
+
+# ---------------------------------------------------------------------------
+# preprocess_image
+# ---------------------------------------------------------------------------
+
+
+def _make_image_b64(size: tuple[int, int], fmt: str = "PNG") -> tuple[str, str]:
+    """用 Pillow 生成指定尺寸图片并返回 ``(base64, mime)``。"""
+    from PIL import Image
+
+    img = Image.new("RGB", size, color=(10, 20, 30))
+    buf = io.BytesIO()
+    img.save(buf, format=fmt)
+    mime = f"image/{fmt.lower()}"
+    return base64.b64encode(buf.getvalue()).decode("ascii"), mime
+
+
+def test_preprocess_image_downscale_large_image(monkeypatch):
+    """超大图（3000x3000）超过 max_dim=2048 时应等比缩放到 2048x2048。"""
+    monkeypatch.setattr(settings, "image_max_dim", 2048)
+    from PIL import Image
+
+    b64, mime = _make_image_b64((3000, 3000), "PNG")
+    new_b64, new_mime = preprocess_image(b64, mime)
+
+    assert new_mime == "image/jpeg"
+    # 缩放后应为 2048x2048
+    with Image.open(io.BytesIO(base64.b64decode(new_b64))) as img:
+        assert img.size == (2048, 2048)
+        assert img.format == "JPEG"
+    # 新 base64 应与原始不同
+    assert new_b64 != b64
+
+
+def test_preprocess_image_downscale_keeps_aspect_ratio(monkeypatch):
+    """非正方形图（3000x1500）应按比例缩放到 (2048, 1024)。"""
+    monkeypatch.setattr(settings, "image_max_dim", 2048)
+    from PIL import Image
+
+    b64, mime = _make_image_b64((3000, 1500), "PNG")
+    new_b64, new_mime = preprocess_image(b64, mime)
+
+    assert new_mime == "image/jpeg"
+    with Image.open(io.BytesIO(base64.b64decode(new_b64))) as img:
+        assert img.size == (2048, 1024)
+
+
+def test_preprocess_image_small_image_unchanged(monkeypatch):
+    """小图（100x100）两边均小于 max_dim，应原样返回。"""
+    monkeypatch.setattr(settings, "image_max_dim", 2048)
+    b64, mime = _make_image_b64((100, 100), "PNG")
+
+    new_b64, new_mime = preprocess_image(b64, mime)
+
+    assert new_b64 == b64
+    assert new_mime == mime
+
+
+def test_preprocess_image_disabled_when_max_dim_zero(monkeypatch):
+    """image_max_dim=0 时禁用预处理，原样返回（即使是超大图）。"""
+    monkeypatch.setattr(settings, "image_max_dim", 0)
+    b64, mime = _make_image_b64((3000, 3000), "PNG")
+
+    new_b64, new_mime = preprocess_image(b64, mime)
+
+    assert new_b64 == b64
+    assert new_mime == mime
+
+
+def test_preprocess_image_invalid_base64_returns_original(monkeypatch):
+    """无效 base64 解码失败时应原样返回，不抛异常。"""
+    monkeypatch.setattr(settings, "image_max_dim", 2048)
+    invalid_b64 = "not-a-valid-base64!!!"
+    original_mime = "image/png"
+
+    new_b64, new_mime = preprocess_image(invalid_b64, original_mime)
+
+    assert new_b64 == invalid_b64
+    assert new_mime == original_mime
+
+
+def test_preprocess_image_corrupt_image_bytes_returns_original(monkeypatch):
+    """能解码为 base64 但不是有效图片数据时，应原样返回。"""
+    monkeypatch.setattr(settings, "image_max_dim", 2048)
+    # 有效 base64 但内容非图片
+    corrupt_b64 = base64.b64encode(b"not an image at all").decode("ascii")
+    original_mime = "image/png"
+
+    new_b64, new_mime = preprocess_image(corrupt_b64, original_mime)
+
+    assert new_b64 == corrupt_b64
+    assert new_mime == original_mime

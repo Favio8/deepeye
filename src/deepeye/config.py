@@ -43,5 +43,15 @@ class Settings(BaseSettings):
     # extract_text 工具实际使用的视觉后端：openai / gemini / custom
     ocr_backend: str = "openai"
 
+    # ---------- 性能优化 ----------
+    # 图片预处理：最大边长，超过则等比缩放后转 JPEG；0 表示禁用预处理
+    image_max_dim: int = 2048
+    # 结果缓存开关
+    cache_enabled: bool = False
+    # 缓存最大条目数（LRU 淘汰）
+    cache_max_size: int = 128
+    # 缓存存活秒数（TTL）
+    cache_ttl: int = 3600
+
 
 settings = Settings()

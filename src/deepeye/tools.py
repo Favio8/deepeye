@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from mcp.types import TextContent
 
-from deepeye.image_utils import parse_image_source
+from deepeye.cache import vision_cache
+from deepeye.config import settings
+from deepeye.image_utils import parse_image_source, preprocess_image
 from deepeye.vision import create_vision_adapter
 
 _DEFAULT_DESCRIBE_PROMPT = (
@@ -20,7 +24,7 @@ _OCR_PROMPT = "请仅提取并返回图片中的所有文字，不要添加任�
 
 
 async def _run_vision(image_source: str, prompt: str, model: str | None = None) -> str:
-    """内部统一流程：解析图像源 → 创建适配器 → 调用 describe。
+    """内部统一流程：解析图像源 → 预处理 → 查缓存 → 调用适配器 → 写缓存。
 
     Args:
         image_source: 图像来源（本地路径 / URL / data URI）。
@@ -31,8 +35,27 @@ async def _run_vision(image_source: str, prompt: str, model: str | None = None) 
         视觉模型返回的文本。
     """
     b64_data, mime_type = await parse_image_source(image_source)
+    # 图片预处理（缩放 + 转 JPEG），失败时原样返回不阻断
+    b64_data, mime_type = preprocess_image(b64_data, mime_type)
+
+    # 用处理后的 b64 计算哈希，作为缓存 key 的一部分
+    image_hash = hashlib.sha256(b64_data.encode()).hexdigest()
+    effective_model = model if model is not None else ""
+
+    # 开启缓存时先查缓存，命中则直接返回
+    if settings.cache_enabled:
+        cached = vision_cache.get(image_hash, prompt, effective_model)
+        if cached is not None:
+            return cached
+
     adapter = create_vision_adapter(model)
-    return await adapter.describe(b64_data, mime_type, prompt)
+    text = await adapter.describe(b64_data, mime_type, prompt)
+
+    # 写入缓存供下次复用
+    if settings.cache_enabled:
+        vision_cache.set(image_hash, prompt, effective_model, text)
+
+    return text
 
 
 async def describe_image(

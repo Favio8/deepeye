@@ -8,9 +8,17 @@ from __future__ import annotations
 
 from deepeye.config import settings
 from deepeye.vision.base import VisionAdapter
+from deepeye.vision.custom_adapter import CustomVisionAdapter
+from deepeye.vision.gemini_adapter import GeminiVisionAdapter
 from deepeye.vision.openai_adapter import OpenAIVisionAdapter
 
-__all__ = ["VisionAdapter", "OpenAIVisionAdapter", "create_vision_adapter"]
+__all__ = [
+    "VisionAdapter",
+    "OpenAIVisionAdapter",
+    "GeminiVisionAdapter",
+    "CustomVisionAdapter",
+    "create_vision_adapter",
+]
 
 
 def create_vision_adapter(model_override: str | None = None) -> VisionAdapter:
@@ -23,10 +31,13 @@ def create_vision_adapter(model_override: str | None = None) -> VisionAdapter:
         :class:`VisionAdapter` 具体实例。
 
     Raises:
-        NotImplementedError: 暂不支持的 provider。
+        ValueError: 不支持的 provider。
     """
     provider = settings.vision_provider.lower().strip()
     if provider == "openai":
         return OpenAIVisionAdapter(model=model_override)
-    # TODO: 实现 gemini / custom 适配器
-    raise NotImplementedError(f"暂不支持的视觉后端: {settings.vision_provider}")
+    if provider == "gemini":
+        return GeminiVisionAdapter(model=model_override)
+    if provider == "custom":
+        return CustomVisionAdapter(model=model_override)
+    raise ValueError(f"不支持的视觉后端: {settings.vision_provider!r}")

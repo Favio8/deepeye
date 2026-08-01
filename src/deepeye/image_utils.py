@@ -11,10 +11,14 @@
 from __future__ import annotations
 
 import base64
+import io
 import mimetypes
 from pathlib import Path
 
 import httpx
+from PIL import Image
+
+from deepeye.config import settings
 
 _DEFAULT_MIME = "image/png"
 
@@ -109,3 +113,47 @@ async def parse_image_source(image_source: str) -> tuple[str, str]:
     if image_source.startswith(("http://", "https://")):
         return await load_image_from_url_as_base64(image_source)
     return load_image_as_base64(image_source)
+
+
+def preprocess_image(b64: str, mime: str) -> tuple[str, str]:
+    """图片预处理：超过最大边长时等比缩放并转 JPEG 以减小体积。
+
+    处理规则：
+    - ``settings.image_max_dim == 0`` 时禁用预处理，原样返回 ``(b64, mime)``。
+    - 图片最大边未超过 ``image_max_dim`` 时原样返回。
+    - 超过则等比缩放到 ``image_max_dim``，再以 JPEG 重新编码，
+      返回的 ``mime`` 改为 ``image/jpeg``。
+    - Pillow 解码/处理任何异常时原样返回（不阻断主流程，保证健壮性）。
+
+    Args:
+        b64: 原始图片的 base64 字符串。
+        mime: 原始图片的 MIME 类型。
+
+    Returns:
+        ``(new_b64, new_mime)`` 元组。
+    """
+    max_dim = settings.image_max_dim
+    if not max_dim or max_dim <= 0:
+        return b64, mime
+
+    try:
+        raw = base64.b64decode(b64)
+        with Image.open(io.BytesIO(raw)) as img:
+            width, height = img.size
+            longest = max(width, height)
+            if longest <= max_dim:
+                return b64, mime
+
+            # 等比缩放
+            scale = max_dim / longest
+            new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+            img = img.convert("RGB")
+            img = img.resize(new_size, Image.LANCZOS)
+
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG", quality=90)
+            new_b64 = base64.b64encode(buffer.getvalue()).decode("ascii")
+            return new_b64, "image/jpeg"
+    except Exception:
+        # 任何解码/处理异常均原样返回，不阻断主流程
+        return b64, mime

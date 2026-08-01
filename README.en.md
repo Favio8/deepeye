@@ -61,8 +61,10 @@ DeepEye uses the **MCP protocol** to decouple "visual understanding" from the mo
 
 - **Three core tools**: `describe_image` (caption), `extract_text` (OCR), `ask_about_image` (VQA)
 - **Standard MCP protocol**: built on the official `mcp` library, stdio transport, compatible with all MCP clients
-- **Pluggable vision backends**: strategy + adapter pattern; OpenAI implemented, Gemini / custom OpenAI-compatible extension points reserved
+- **Three switchable vision backends**: strategy + adapter pattern; supports OpenAI (GPT-5.6 Luna, etc.), Google Gemini (gemini-1.5-pro / gemini-2.0-flash, etc.), and custom OpenAI-compatible services (Alibaba Qwen-VL / Zhipu / vLLM / Ollama, etc.). Switch instantly via `VISION_PROVIDER` — no code changes required
 - **Three image sources**: local path / public URL / Base64 data URI, unified parsing
+- **Image preprocessing**: oversized images are auto-downscaled proportionally (default 2048px) and converted to JPEG, reducing token consumption
+- **Result caching**: optional LRU + TTL cache; repeated images skip redundant API calls
 - **Minimal deployment**: clone → install → fill in an API key → run; no account, no sign-up
 - **Zero intrusion**: doesn't modify the model itself; a transparent tool layer on top of the main reasoning loop
 - **Open source**: MIT license, community-driven
@@ -260,16 +262,20 @@ All configuration is loaded from environment variables or a `.env` file (see `.e
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VISION_PROVIDER` | `openai` | Vision backend provider: `openai` / `gemini` / `custom` (only `openai` fully implemented so far) |
+| `VISION_PROVIDER` | `openai` | Vision backend provider: `openai` / `gemini` / `custom` (all three implemented; switch freely) |
 | `OPENAI_API_KEY` | — | API key for OpenAI or a compatible service |
 | `OPENAI_MODEL` | `gpt-5.6-luna` | Vision model name |
 | `OPENAI_BASE_URL` | — | API endpoint; leave empty for the official `https://api.openai.com/v1`; can point to Azure / a proxy / a compatible service |
-| `GEMINI_API_KEY` | — | Gemini backend (reserved) |
-| `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini model name (reserved) |
-| `CUSTOM_API_KEY` | — | Custom OpenAI-compatible service key (reserved) |
-| `CUSTOM_BASE_URL` | — | Custom service endpoint (reserved) |
-| `CUSTOM_MODEL` | `qwen-vl-max` | Custom model name (reserved) |
+| `GEMINI_API_KEY` | — | Gemini backend API key |
+| `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini model name |
+| `CUSTOM_API_KEY` | — | Custom OpenAI-compatible service API key |
+| `CUSTOM_BASE_URL` | — | Custom service endpoint |
+| `CUSTOM_MODEL` | `qwen-vl-max` | Custom model name |
 | `OCR_BACKEND` | `openai` | The vision backend actually used by `extract_text` |
+| `IMAGE_MAX_DIM` | `2048` | Max image edge length (px) for preprocessing; larger images are downscaled proportionally and converted to JPEG. `0` disables preprocessing |
+| `CACHE_ENABLED` | `false` | Enable vision result caching (LRU + TTL) |
+| `CACHE_MAX_SIZE` | `128` | Max number of cache entries |
+| `CACHE_TTL` | `3600` | Cache TTL in seconds |
 
 **Example with a compatible service** (Alibaba Qwen-VL):
 
@@ -278,6 +284,21 @@ VISION_PROVIDER=openai
 OPENAI_API_KEY=sk-your-dashscope-key
 OPENAI_MODEL=qwen-vl-max
 OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+**Switching to other vision backends**:
+
+```bash
+# Switch to Gemini
+VISION_PROVIDER=gemini
+GEMINI_API_KEY=your-key
+GEMINI_MODEL=gemini-2.0-flash
+
+# Or a custom OpenAI-compatible service (e.g., Alibaba Qwen-VL)
+VISION_PROVIDER=custom
+CUSTOM_API_KEY=your-key
+CUSTOM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+CUSTOM_MODEL=qwen-vl-max
 ```
 
 ---
@@ -301,8 +322,8 @@ For the full configuration guide covering 9 clients, see [Coding Agent Integrati
 | Backend | Status | Notes |
 |---------|--------|-------|
 | **OpenAI-compatible** | Implemented | Works with OpenAI official, Azure OpenAI, Alibaba Qwen-VL, Zhipu GLM-4V, Moonshot, etc. |
-| Gemini | Reserved | Adapter interface ready, implementation pending |
-| Custom OpenAI-compatible | Reserved | For any self-hosted service that speaks OpenAI Chat Completions (vLLM / Ollama, etc.) |
+| **Gemini** | Implemented | Supports Google Gemini models (gemini-1.5-pro / gemini-2.0-flash, etc.) |
+| **Custom OpenAI-compatible** | Implemented | For any self-hosted service that speaks OpenAI Chat Completions (vLLM / Ollama / Alibaba Qwen-VL / Zhipu, etc.) |
 | Local OCR (Tesseract / PaddleOCR) | Planned | Keeps data on-device for privacy-sensitive scenarios |
 
 ---
@@ -368,11 +389,9 @@ deepeye/
 - [x] OpenAI-compatible vision backend
 - [x] Three image sources (local / URL / Base64)
 - [x] Three core tools (describe / OCR / VQA)
-- [ ] Gemini adapter
-- [ ] Custom OpenAI-compatible adapter (vLLM / Ollama local deployment)
+- [x] Multi-backend vision support (Gemini + Custom adapters)
+- [x] Performance optimization (image preprocessing + result caching)
 - [ ] Tesseract / PaddleOCR local OCR backend
-- [ ] Image preprocessing (smart compression, auto-downscaling oversized images)
-- [ ] Result caching (same image + prompt hits cache)
 - [ ] Video keyframe analysis tool
 - [ ] Multi-model pipeline (e.g., GPT-5.6 Luna classifies first, then routes to a specialized model)
 - [ ] Publish to PyPI

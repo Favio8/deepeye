@@ -61,8 +61,10 @@ DeepEye 用 **MCP 协议**把"视觉理解"从模型本体中解耦出来，做�
 
 - **三个核心工具**：`describe_image`（图像描述）、`extract_text`（OCR）、`ask_about_image`（视觉问答）
 - **标准 MCP 协议**：基于官方 `mcp` 库，stdio 传输，兼容所有 MCP 客户端
-- **插件式视觉后端**：策略模式 + 适配器模式，OpenAI 已实现，Gemini / 自定义 OpenAI 兼容服务预留扩展点
+- **三类视觉后端可切换**：策略模式 + 适配器模式，已支持 OpenAI（GPT-5.6 Luna 等）、Google Gemini（gemini-1.5-pro / gemini-2.0-flash 等）、自定义 OpenAI 兼容服务（通义 Qwen-VL / 智谱 / vLLM / Ollama 等），通过 `VISION_PROVIDER` 一键切换，不改代码
 - **三种图像来源**：本地路径 / 公网 URL / Base64 data URI，统一解析
+- **图片预处理**：超大图自动等比缩放（默认 2048px）转 JPEG，减少 token 消耗
+- **结果缓存**：可选 LRU + TTL 缓存，重复图片不重复调用 API
 - **极简部署**：克隆 → 安装 → 填 API Key → 启动，无需账号、无需注册
 - **零侵入**：不修改模型本体，纯工具层增强，对主推理流程透明
 - **开放开源**：MIT 协议，社区共建
@@ -260,16 +262,20 @@ DeepEye 暴露三个符合 MCP 规范的工具：
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `VISION_PROVIDER` | `openai` | 视觉后端提供者：`openai` / `gemini` / `custom`（目前仅 `openai` 完整实现） |
+| `VISION_PROVIDER` | `openai` | 视觉后端提供者：`openai` / `gemini` / `custom`（三类均已实现，可自由切换） |
 | `OPENAI_API_KEY` | — | OpenAI 或兼容服务的 API Key |
 | `OPENAI_MODEL` | `gpt-5.6-luna` | 视觉模型名称 |
 | `OPENAI_BASE_URL` | — | 接口地址，留空用官方 `https://api.openai.com/v1`；可改为 Azure / 代理 / 兼容服务 |
-| `GEMINI_API_KEY` | — | Gemini 后端（预留） |
-| `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini 模型名称（预留） |
-| `CUSTOM_API_KEY` | — | 自定义 OpenAI 兼容服务 Key（预留） |
-| `CUSTOM_BASE_URL` | — | 自定义服务接口地址（预留） |
-| `CUSTOM_MODEL` | `qwen-vl-max` | 自定义模型名称（预留） |
+| `GEMINI_API_KEY` | — | Gemini 后端 API Key |
+| `GEMINI_MODEL` | `gemini-1.5-pro` | Gemini 模型名称 |
+| `CUSTOM_API_KEY` | — | 自定义 OpenAI 兼容服务 Key |
+| `CUSTOM_BASE_URL` | — | 自定义服务接口地址 |
+| `CUSTOM_MODEL` | `qwen-vl-max` | 自定义模型名称 |
 | `OCR_BACKEND` | `openai` | `extract_text` 实际使用的视觉后端 |
+| `IMAGE_MAX_DIM` | `2048` | 图片预处理最大边长（像素），超过则等比缩放转 JPEG。`0` 禁用预处理 |
+| `CACHE_ENABLED` | `false` | 是否开启视觉结果缓存（LRU + TTL） |
+| `CACHE_MAX_SIZE` | `128` | 缓存最大条目数 |
+| `CACHE_TTL` | `3600` | 缓存存活秒数 |
 
 **用兼容服务的例子**（以阿里通义 Qwen-VL 为例）：
 
@@ -278,6 +284,21 @@ VISION_PROVIDER=openai
 OPENAI_API_KEY=sk-your-dashscope-key
 OPENAI_MODEL=qwen-vl-max
 OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+**切换到其他视觉后端**：
+
+```bash
+# 切换到 Gemini
+VISION_PROVIDER=gemini
+GEMINI_API_KEY=你的key
+GEMINI_MODEL=gemini-2.0-flash
+
+# 或自定义 OpenAI 兼容服务（如通义 Qwen-VL）
+VISION_PROVIDER=custom
+CUSTOM_API_KEY=你的key
+CUSTOM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+CUSTOM_MODEL=qwen-vl-max
 ```
 
 ---
@@ -301,8 +322,8 @@ claude mcp add deepeye -- /path/to/deepeye/.venv/bin/deepeye
 | 后端 | 状态 | 说明 |
 |------|------|------|
 | **OpenAI 兼容** | 已实现 | 支持 OpenAI 官方、Azure OpenAI、阿里通义 Qwen-VL、智谱 GLM-4V、Moonshot 等 |
-| Gemini | 预留 | 适配器接口已就位，待实现 |
-| 自定义 OpenAI 兼容 | 预留 | 用于任何兼容 OpenAI Chat Completions 格式的自部署服务（vLLM / Ollama 等） |
+| **Gemini** | 已实现 | 支持 Google Gemini 系列模型（gemini-1.5-pro / gemini-2.0-flash 等） |
+| **自定义 OpenAI 兼容** | 已实现 | 用于任何兼容 OpenAI Chat Completions 格式的自部署服务（vLLM / Ollama / 通义 Qwen-VL / 智谱等） |
 | 本地 OCR (Tesseract / PaddleOCR) | 计划中 | 隐私场景下数据不出本机 |
 
 ---
@@ -367,11 +388,9 @@ deepeye/
 - [x] OpenAI 兼容视觉后端
 - [x] 三种图像来源（本地 / URL / Base64）
 - [x] 三个核心工具（describe / OCR / VQA）
-- [ ] Gemini 适配器
-- [ ] 自定义 OpenAI 兼容适配器（vLLM / Ollama 本地部署）
+- [x] 多视觉后端支持（Gemini + Custom 适配器）
+- [x] 性能优化（图片预处理 + 结果缓存）
 - [ ] Tesseract / PaddleOCR 本地 OCR 后端
-- [ ] 图片预处理（智能压缩、超大图自动缩放）
-- [ ] 结果缓存（相同图片 + prompt 命中缓存）
 - [ ] 视频关键帧分析工具
 - [ ] 多模型链路（先 GPT-5.6 Luna 识别类型，再切专业模型处理）
 - [ ] 发布到 PyPI
