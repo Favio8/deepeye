@@ -280,10 +280,13 @@ DeepEye 暴露三个符合 MCP 规范的工具：
 | `CUSTOM_BASE_URL` | — | 自定义服务接口地址 |
 | `CUSTOM_MODEL` | `qwen-vl-max` | 自定义模型名称 |
 | `OCR_BACKEND` | `openai` | `extract_text` 实际使用的视觉后端 |
-| `IMAGE_MAX_DIM` | `2048` | 图片预处理最大边长（像素），超过则等比缩放转 JPEG。`0` 禁用预处理 |
-| `CACHE_ENABLED` | `false` | 是否开启视觉结果缓存（LRU + TTL） |
+| `IMAGE_MAX_DIM` | `1536` | 图片预处理最大边长（像素），超过则等比缩放转 JPEG。`0` 禁用预处理 |
+| `CACHE_ENABLED` | `true` | 是否开启视觉结果缓存（LRU + TTL） |
 | `CACHE_MAX_SIZE` | `128` | 缓存最大条目数 |
 | `CACHE_TTL` | `3600` | 缓存存活秒数 |
+| `REQUEST_TIMEOUT` | `120` | 视觉后端 HTTP 请求超时（秒） |
+| `MAX_RETRIES` | `3` | 失败重试次数（仅对网络/超时错误重试） |
+| `MAX_TOKENS` | `1024` | 视觉模型返回的最大 token 数 |
 
 **用兼容服务的例子**（以阿里通义 Qwen-VL 为例）：
 

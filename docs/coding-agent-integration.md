@@ -30,10 +30,13 @@ DeepEye 支持的环境变量：
 | `OPENAI_BASE_URL` | 可选，自定义 OpenAI 兼容端点 | - |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Gemini 后端 | - |
 | `CUSTOM_API_KEY` / `CUSTOM_BASE_URL` / `CUSTOM_MODEL` | 自定义 OpenAI 兼容后端 | - |
-| `IMAGE_MAX_DIM` | 图片预处理最大边长（像素），超过则等比缩放转 JPEG。`0` 禁用预处理 | `2048` |
-| `CACHE_ENABLED` | 是否开启视觉结果缓存（LRU + TTL） | `false` |
+| `IMAGE_MAX_DIM` | 图片预处理最大边长（像素），超过则等比缩放转 JPEG。`0` 禁用预处理 | `1536` |
+| `CACHE_ENABLED` | 是否开启视觉结果缓存（LRU + TTL） | `true` |
 | `CACHE_MAX_SIZE` | 缓存最大条目数 | `128` |
 | `CACHE_TTL` | 缓存存活秒数 | `3600` |
+| `REQUEST_TIMEOUT` | 视觉后端 HTTP 请求超时（秒） | `120` |
+| `MAX_RETRIES` | 失败重试次数（仅对网络/超时错误重试） | `3` |
+| `MAX_TOKENS` | 视觉模型返回的最大 token 数 | `1024` |
 
 > 本文示例统一以 OpenAI 后端为例。命令路径用 `/path/to/deepeye/.venv/bin/deepeye` 作为占位，Windows 下应替换为对应的 `.exe` 路径，且 JSON 中的反斜杠需转义为 `\\`。
 

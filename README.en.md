@@ -280,10 +280,13 @@ All configuration is loaded from environment variables or a `.env` file (see `.e
 | `CUSTOM_BASE_URL` | — | Custom service endpoint |
 | `CUSTOM_MODEL` | `qwen-vl-max` | Custom model name |
 | `OCR_BACKEND` | `openai` | The vision backend actually used by `extract_text` |
-| `IMAGE_MAX_DIM` | `2048` | Max image edge length (px) for preprocessing; larger images are downscaled proportionally and converted to JPEG. `0` disables preprocessing |
-| `CACHE_ENABLED` | `false` | Enable vision result caching (LRU + TTL) |
+| `IMAGE_MAX_DIM` | `1536` | Max image edge length (px) for preprocessing; larger images are downscaled proportionally and converted to JPEG. `0` disables preprocessing |
+| `CACHE_ENABLED` | `true` | Enable vision result caching (LRU + TTL) |
 | `CACHE_MAX_SIZE` | `128` | Max number of cache entries |
 | `CACHE_TTL` | `3600` | Cache TTL in seconds |
+| `REQUEST_TIMEOUT` | `120` | HTTP request timeout for vision backend (seconds) |
+| `MAX_RETRIES` | `3` | Retry count on network/timeout errors (no retry on 4xx) |
+| `MAX_TOKENS` | `1024` | Max tokens returned by the vision model |
 
 **Example with a compatible service** (Alibaba Qwen-VL):
 
